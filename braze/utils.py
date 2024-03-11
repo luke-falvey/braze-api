@@ -20,14 +20,18 @@ def user_merge(keep_user: Mapping, merge_user: Mapping):
     return keep_user
 
 
-def get_array_object_operation(value: Mapping) -> Optional[ArrayObjectOperation]:
-    if isinstance(value, dict) and len(value) == 1:
-        operation = value[value.keys()[0]]
+def get_array_object_operation(value) -> Optional[ArrayObjectOperation]:
+    if (
+        isinstance(value, dict)
+        and len(value) == 1
+        and any(k in ARRAY_OPERATIONS for k in value)
+    ):
+        operation = list(value)[0]
         if operation == ArrayObjectOperation.ADD.value:
             return ArrayObjectOperation.ADD
         elif operation == ArrayObjectOperation.UPDATE.value:
             return ArrayObjectOperation.UPDATE
-        elif operation == ArrayObjectOperation.UPDATE.value:
+        elif operation == ArrayObjectOperation.REMOVE.value:
             return ArrayObjectOperation.REMOVE
 
 
@@ -95,7 +99,7 @@ def update_attributes(
         if array_object_operation:
             operations = v[array_object_operation.value]
             execute_array_object_operation(
-                existing_attributes[k],
+                existing_attributes.get(k, []),
                 operations,
                 array_object_operation,
                 merge_objects,
