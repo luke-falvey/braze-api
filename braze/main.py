@@ -20,7 +20,7 @@ from models import (
     UserTrackRequest,
     UserTrackSuccessResponse,
 )
-from utils import user_merge, update_attributes
+from utils import user_merge, update_attributes, remove_none
 
 app = FastAPI()
 
@@ -35,12 +35,16 @@ def create_braze_user(
 
     if user_dict and existing_user:
         existing_user = existing_user.dict()
+        custom_attributes = existing_user.pop("custom_attributes", {})
+        existing_user = {**existing_user, **custom_attributes}
         user_dict = update_attributes(existing_user, user_dict, merge_objects)
 
-    return BrazeUser(
-        created_at=datetime.utcnow(),
+    user_dict = remove_none(user_dict)
+
+    braze_user = BrazeUser(
+        created_at=user_dict.pop("created_at", (datetime.utcnow())),
         external_id=user_dict.pop("external_id", None),
-        braze_id=str(uuid.uuid4()),
+        braze_id=user_dict.pop("braze_id", str(uuid.uuid4())),
         first_name=user_dict.pop("first_name", None),
         last_name=user_dict.pop("last_name", None),
         email=user_dict.pop("email", None),
@@ -49,6 +53,8 @@ def create_braze_user(
         country=user_dict.pop("country", None),
         custom_attributes=user_dict,
     )
+
+    return braze_user
 
 
 @app.post("/users/track")
